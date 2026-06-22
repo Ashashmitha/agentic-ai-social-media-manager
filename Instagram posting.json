@@ -1,0 +1,476 @@
+{
+  "name": "Instagram posting",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "d6865516-8c40-41a7-824d-4972b9a01b18",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "fileSelector": "C:\\Users\\Ashmitha\\.n8n-files\\backgrounds\\*",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "89b544f0-19fc-438d-b9e0-624979b95783",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst randomIndex = Math.floor(Math.random() * items.length);\n\nconst selected = items[randomIndex];\n\nreturn [{\n  json: {\n    imagePath:\n      selected.binary.data.directory +\n      \"\\\\\" +\n      selected.binary.data.fileName\n  },\n  binary: selected.binary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "b755f6d6-30cd-4d83-8179-0e9ea8a6c76d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.1-flash-lite-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.1-flash-lite-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a social media manager for a website design company.\n\nCreate a COMPLETELY DIFFERENT Instagram post every time.\n\nRules:\n- Never repeat previous topics.\n- Randomly choose one topic:\n  * Website Design\n  * UI/UX\n  * SEO\n  * Digital Marketing\n  * Branding\n  * E-commerce\n  * Landing Pages\n  * Conversion Optimization\n  * Mobile Apps\n  * AI for Business\n  * Business Growth\n  * Social Media Marketing\n\nGenerate:\n\nHEADLINE:\nSUBHEADLINE:\nCAPTION:\nHASHTAGS:\n\nMake every response unique."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        752,
+        0
+      ],
+      "id": "52c1a750-bf60-4023-86ce-c8b3f6eab16d",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "K3cAMnOeXsD8Uds3",
+          "name": "pro acc"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nconst text = item.json.content.parts[0].text;\n\nconst headline =\n  text.match(/HEADLINE:\\s*(.*?)\\s*(?=\\n\\s*SUBHEADLINE:|$)/s)?.[1]?.trim() || '';\n\nconst subheadline =\n  text.match(/SUBHEADLINE:\\s*(.*?)\\s*(?=\\n\\s*CAPTION:|$)/s)?.[1]?.trim() || '';\n\nconst caption =\n  text.match(/CAPTION:\\s*(.*?)\\s*(?=\\n\\s*HASHTAGS:|$)/s)?.[1]?.trim() || '';\n\nconst hashtags =\n  text.match(/HASHTAGS:\\s*(.*)$/s)?.[1]?.trim() || '';\n\nreturn [{\n  json: {\n    headline,\n    subheadline,\n    caption,\n    hashtags\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "543c249f-7d96-4133-bc99-c9c7797d364a",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nreturn [{\n  json: {\n    headline: item.json.headline,\n    subheadline: item.json.subheadline,\n    caption: item.json.caption,\n    hashtags: item.json.hashtags\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        0
+      ],
+      "id": "e9da5245-5cdd-495a-a055-9af8a669ba29",
+      "name": "Render Instagram Post"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nconst imagePath = item.json.imagePath\n  .replace(/\\\\/g, '/')\n  .replace('C:/', 'file:///C:/');\n\nconst logoPath =\n  'file:///C:/Users/Ashmitha/.n8n-files/logo/logo.png';\n\nconst captionText = (item.json.caption || '').replace(\n  /Contact us today:.*$/is,\n  ''\n);\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>Instagram Post</title>\n\n<style>\n\n*{\n  box-sizing:border-box;\n}\n\nbody{\n  width:1080px;\n  height:1350px;\n  margin:0;\n  padding:70px;\n\n  background-image:url('${imagePath}');\n  background-size:cover;\n  background-position:center;\n  background-repeat:no-repeat;\n\n  font-family:Arial,sans-serif;\n  color:white;\n\n  position:relative;\n  overflow:hidden;\n}\n\n.overlay{\n  position:absolute;\n  inset:0;\n  background:rgba(0,0,0,0.50);\n}\n\n.logo{\n  position:absolute;\n  top:35px;\n  right:35px;\n  width:150px;\n  z-index:10;\n  border-radius:12px;\n}\n\n.content{\n  position:relative;\n  z-index:5;\n  max-width:850px;\n}\n\nh1{\n  font-size:72px;\n  font-weight:bold;\n  line-height:1.05;\n  margin:0 0 20px 0;\n}\n\nh2{\n  font-size:42px;\n  color:#e5e5e5;\n  margin:0 0 35px 0;\n}\n\n.caption{\n  font-size:24px;\n  line-height:1.4;\n  margin-bottom:25px;\n}\n\n.contact{\n  font-size:30px;\n  font-weight:bold;\n  color:#FFD700;\n  margin-bottom:25px;\n}\n\n.hashtags{\n  font-size:18px;\n  color:#f0f0f0;\n  line-height:1.5;\n}\n\n</style>\n</head>\n\n<body>\n\n<div class=\"overlay\"></div>\n\n<img src=\"${logoPath}\" class=\"logo\">\n\n<div class=\"content\">\n\n<h1>${item.json.headline || ''}</h1>\n\n<h2>${item.json.subheadline || ''}</h2>\n\n<div class=\"caption\">\n${captionText}\n</div>\n\n<div class=\"contact\">\n📞 Call Us: 8667581784\n</div>\n\n<div class=\"hashtags\">\n${item.json.hashtags || ''}\n</div>\n\n</div>\n\n</body>\n</html>\n`;\n\nreturn [\n  {\n    json: {\n      html\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "bec4bc0b-1531-4aa6-b2e8-751706763205",
+      "name": "Build HTML"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1504,
+        0
+      ],
+      "id": "7ce7ceb5-45d7-40e8-980f-949aadfa25a0",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        576,
+        0
+      ],
+      "id": "261a89fb-82e5-4cf4-a45e-8bff1587fd7f",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/render",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2224,
+        0
+      ],
+      "id": "95361ddf-786c-4b7e-9f37-54c261c05ae8",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fileSelector": "C:\\Users\\Ashmitha\\.n8n-files\\output\\post.png",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        2416,
+        0
+      ],
+      "id": "952af1f6-7f0b-4aa3-9adb-4279b1d92228",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "operation": "uploadFile",
+        "additionalFieldsFile": {}
+      },
+      "type": "n8n-nodes-cloudinary.cloudinary",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        0
+      ],
+      "id": "056e4d91-9c38-48db-bd50-88284f03e785",
+      "name": "Upload an asset from file data",
+      "credentials": {
+        "cloudinaryApi": {
+          "id": "lyfGW0it4tLvjOLh",
+          "name": "Cloudinary account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v23.0/17841424108849092/media",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{$json[\"secure_url\"]}}"
+            },
+            {
+              "name": "caption",
+              "value": "={{$node[\"Render Instagram Post\"].json[\"caption\"]}}"
+            },
+            {
+              "name": "access_token",
+              "value": "EAAOK2CoZCqY0BRwdJsqKT0loAHrDclo9XoYLhGqmFN2g7wfOZBzxo4wNU7bdWrLZBC8RKeBZBq8oqUjwGi56Rl6XOF7NKVom0z6ZCgBIlsKm9BYcCY6faa018ZCutV7k4ZAOZA0Q4OZAxgjir1spZAqJCCAZApWqqpk0yg8WfKYP9RYRa9iZCZB1IxepEbAZBxhGlMtBDQXTgHW1vkJ3Ozi6X87GxQZCVXY2ld0plMe"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2832,
+        0
+      ],
+      "id": "1342c3e0-8023-41b5-8bec-94bf7fdbc0e5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v23.0/17841424108849092/media_publish",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{$json[\"id\"]}}"
+            },
+            {
+              "name": "access_token",
+              "value": "EAAOK2CoZCqY0BRwdJsqKT0loAHrDclo9XoYLhGqmFN2g7wfOZBzxo4wNU7bdWrLZBC8RKeBZBq8oqUjwGi56Rl6XOF7NKVom0z6ZCgBIlsKm9BYcCY6faa018ZCutV7k4ZAOZA0Q4OZAxgjir1spZAqJCCAZApWqqpk0yg8WfKYP9RYRa9iZCZB1IxepEbAZBxhGlMtBDQXTgHW1vkJ3Ozi6X87GxQZCVXY2ld0plMe"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3040,
+        0
+      ],
+      "id": "73bb1d14-3cdb-4931-a972-16c98949ab7c",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "html",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        0
+      ],
+      "id": "0b49ea13-44ae-410e-9748-001ca79a296d",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "C:\\Users\\Ashmitha\\.n8n-files\\output\\post.html",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        0
+      ],
+      "id": "bc645f5d-03b3-49fc-a1e0-e0d5e6a619a0",
+      "name": "Read/Write Files from Disk2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Render Instagram Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Instagram Post": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Build HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Upload an asset from file data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload an asset from file data": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7a6e3a7b-06bd-4410-aeca-9b2615b15851",
+  "meta": {
+    "instanceId": "0946314a14de9e154b6afb3b4b71165a80b35b2d9da9c2060d4b612c6c862229"
+  },
+  "nodeGroups": [],
+  "id": "SwmmKQZt4WPITgr7",
+  "tags": []
+}
